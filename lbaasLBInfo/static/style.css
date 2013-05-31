@@ -1,0 +1,61 @@
+BODY {
+	FONT-SIZE: 12px; BACKGROUND: #f8f8ff; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+A {
+	FONT-SIZE: 12px; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: black; TEXT-DECORATION: underline
+}
+TH {
+	FONT-SIZE: 12px; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+TD {
+	FONT-SIZE: 12px; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+HR {
+	BORDER-RIGHT: #d3d3d3 1px solid; BORDER-TOP: #d3d3d3 1px solid; BORDER-LEFT: #d3d3d3 1px solid; BORDER-BOTTOM: #d3d3d3 1px solid
+}
+.error {
+	FONT-SIZE: 11px; COLOR: red; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.info {
+	FONT-SIZE: 11px; COLOR: blue; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.centerboxtext {
+	FONT-SIZE: 12px; BACKGROUND: white; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.sideboxtext {
+	FONT-SIZE: 12px; BACKGROUND: #fafafa; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.plainboxtitle {
+	BORDER-TOP: #333333 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 12px; BACKGROUND: #dcdcdc; COLOR: #333333; BORDER-BOTTOM: #333333 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.plainboxtext {
+	FONT-SIZE: 12px; BACKGROUND: #fafafa; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.sideboxtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; BACKGROUND: #fafafa; COLOR: #333333; BORDER-BOTTOM: #333333 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.centerboxtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 14px; BACKGROUND: #fafafa; COLOR: #333333; BORDER-BOTTOM: #333333 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.pgprocessed {
+	FONT-SIZE: 9px; COLOR: #adadad; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.userexttable {
+	FONT-SIZE: 12px; BACKGROUND: #333333; COLOR: white; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.usertoppanel {
+	FONT-SIZE: 12px; BACKGROUND: #eaeaea; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.userbottompanel {
+	FONT-SIZE: 12px; BACKGROUND: #fafafa; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.myaccount1 {
+	FONT-SIZE: 12px; BACKGROUND: #cdcdcd; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.myaccount2 {
+	FONT-SIZE: 12px; BACKGROUND: #efefef; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+

@@ -1,0 +1,19 @@
+.button {
+	BORDER-RIGHT: #a9a9a9 1px solid; BORDER-TOP: #a9a9a9 1px solid; FONT-SIZE: 11px; BACKGROUND: #dcdcdc; BORDER-LEFT: #a9a9a9 1px solid; COLOR: #696969; BORDER-BOTTOM: #a9a9a9 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.field_textbox {
+	BORDER-RIGHT: #a9a9a9 1px solid; BORDER-TOP: #a9a9a9 1px solid; FONT-SIZE: 11px; BACKGROUND: #fcfcfc; BORDER-LEFT: #a9a9a9 1px solid; COLOR: #696969; BORDER-BOTTOM: #a9a9a9 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.field_filebox {
+	BORDER-RIGHT: #a9a9a9 1px solid; BORDER-TOP: #a9a9a9 1px solid; FONT-SIZE: 11px; BACKGROUND: #fcfcfc; BORDER-LEFT: #a9a9a9 1px solid; COLOR: #696969; BORDER-BOTTOM: #a9a9a9 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.field_listbox {
+	BORDER-RIGHT: #a9a9a9 1px solid; BORDER-TOP: #a9a9a9 1px solid; FONT-SIZE: 11px; BACKGROUND: #fcfcfc; BORDER-LEFT: #a9a9a9 1px solid; COLOR: #696969; BORDER-BOTTOM: #a9a9a9 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.field_selectbox {
+	BORDER-RIGHT: #a9a9a9 1px solid; BORDER-TOP: #a9a9a9 1px solid; FONT-SIZE: 11px; BACKGROUND: #fcfcfc; BORDER-LEFT: #a9a9a9 1px solid; COLOR: #696969; BORDER-BOTTOM: #a9a9a9 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.field_checkbox {
+	FONT-SIZE: 11px; BACKGROUND: #fcfcfc; COLOR: #696969; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+

@@ -1,0 +1,10 @@
+.pollq {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; BACKGROUND: #f5f5f5; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.polli {
+	FONT-WEIGHT: normal; FONT-SIZE: 12px; BACKGROUND: white; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.pollb {
+	BORDER-TOP: #333333 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 12px; BACKGROUND: white; COLOR: #333333; BORDER-BOTTOM: #333333 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+

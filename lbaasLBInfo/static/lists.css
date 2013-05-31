@@ -1,0 +1,25 @@
+.row0 {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #f0e68c; FONT-FAMILY: Arial, Helvetica, sans-serif; BACKGROUND-COLOR: #0000c8
+}
+.row1 {
+	FONT-SIZE: 11px; COLOR: black; FONT-FAMILY: Arial, Helvetica, sans-serif; BACKGROUND-COLOR: #f0f0f0
+}
+.row2 {
+	FONT-SIZE: 11px; COLOR: black; FONT-FAMILY: Arial, Helvetica, sans-serif; BACKGROUND-COLOR: #ffffff
+}
+.rowblank {
+	FONT-SIZE: 12px; BACKGROUND: white; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.rowgroup {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; BACKGROUND: white; COLOR: #333333; FONT-FAMILY: Arial, Helvetica, sans-serif
+}
+.rowpostedby {
+	FONT-WEIGHT: normal; FONT-SIZE: 11px; COLOR: #999999; BORDER-BOTTOM: #a9a9a9 1px solid; FONT-FAMILY: Arial, Helvetica, sans-serif; BACKGROUND-COLOR: transparent
+}
+.rowpostedbylink {
+	FONT-SIZE: 11px; COLOR: #999999; FONT-FAMILY: Arial, Helvetica, sans-serif; BACKGROUND-COLOR: transparent; TEXT-DECORATION: none
+}
+.rowpostedbylink:hover {
+	COLOR: #666666; TEXT-DECORATION: underline
+}
+

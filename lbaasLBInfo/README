@@ -1,0 +1,10 @@
+Python Web App based on the Bottle micro framework.
+It listens on port 8080 and returns information
+about given loadbalancers.
+It requires access to all LBaaS MySql servers and
+the Graphite server.
+
+This is my first ever attempt at python.
+
+Konstantin
+08-10-2012
