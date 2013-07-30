@@ -87,17 +87,21 @@ class DNSManipulator(object):
         log_event = "Quering DNS server " + str(self.glb_config.dns_backends[0]) + " for " + domain_name + " type " + dns_type
         self.logger.info(log_event)
 
-        r = DNS.DnsRequest(domain_name, qtype=dns_type, server=self.glb_config.dns_backends[0], protocol='udp', timeout=300)
-        res = r.req()
-        res_list = res.answers
-
         ip_list = []
-        for i in range(0, len(res_list)):
-            if res_list[i]["typename"] == "A":
-                ip_list.append(res_list[i]["data"])
 
-        log_event =  "DNS server returned " + str(ip_list)
-        self.logger.info(log_event)
+        try:
+            r = DNS.DnsRequest(domain_name, qtype=dns_type, server=self.glb_config.dns_backends[0], protocol='udp', timeout=300)
+            res = r.req()
+            res_list = res.answers
+
+            for i in range(0, len(res_list)):
+                if res_list[i]["typename"] == "A":
+                    ip_list.append(res_list[i]["data"])
+
+            log_event =  "DNS server returned " + str(ip_list)
+            self.logger.info(log_event)
+        except (DNS.Base.SocketError) as dns_error:
+                self.logger.info("Cant connect to back-end DNS server - %s" % (dns_error))
 
         return ip_list
     
@@ -117,33 +121,38 @@ class DNSManipulator(object):
         #    selected_geo_ip = dns_resolved_list[0]
 
         seleted_geo_loc = "Unknown"
+        requestor_location = "Unknown"
+        selected_geo_ip = "Nowhere"
 
-        con = MySQLdb.connect(self.glb_config.geoip_store_host, self.glb_config.geoip_store_user, self.glb_config.geoip_store_pass, self.glb_config.geoip_store_db)
-        cur = con.cursor(MySQLdb.cursors.DictCursor)
-        statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + requestor + "') BETWEEN begin_ip_num AND end_ip_num"
-        cur.execute(statement)
-        rows = cur.fetchall()
-        if len(rows) != 0:
-            requestor_location = rows[0]['country_code']
-        else:
-            requestor_location = "Unknown"
-
-        for i in range(0, len(dns_resolved_list)):
-            statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + dns_resolved_list[i] + "') BETWEEN begin_ip_num AND end_ip_num"
+        try:
+            con = MySQLdb.connect(self.glb_config.geoip_store_host, self.glb_config.geoip_store_user, self.glb_config.geoip_store_pass, self.glb_config.geoip_store_db)
+            cur = con.cursor(MySQLdb.cursors.DictCursor)
+            statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + requestor + "') BETWEEN begin_ip_num AND end_ip_num"
             cur.execute(statement)
             rows = cur.fetchall()
             if len(rows) != 0:
-                seleted_geo_loc = rows[0]['country_code']
-                if seleted_geo_loc == requestor_location:
-                    selected_geo_ip = dns_resolved_list[i]
-                    break
+                requestor_location = rows[0]['country_code']
+            else:
+                requestor_location = "Unknown"
+
+            for i in range(0, len(dns_resolved_list)):
+                statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + dns_resolved_list[i] + "') BETWEEN begin_ip_num AND end_ip_num"
+                cur.execute(statement)
+                rows = cur.fetchall()
+                if len(rows) != 0:
+                    seleted_geo_loc = rows[0]['country_code']
+                    if seleted_geo_loc == requestor_location:
+                        selected_geo_ip = dns_resolved_list[i]
+                        break
+                    else:
+                        selected_geo_ip = dns_resolved_list[0]
                 else:
                     selected_geo_ip = dns_resolved_list[0]
-            else:
-                selected_geo_ip = dns_resolved_list[0]
 
-        cur.close()
-        con.close()
+            cur.close()
+            con.close()
+        except (MySQLdb.OperationalError) as mysql_error:
+            self.logger.info(mysql_error)
 
         log_event =  "Requestor " + requestor + " located at " + requestor_location
         self.logger.info(log_event)

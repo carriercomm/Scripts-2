@@ -16,37 +16,49 @@ class ThreadHealthCheck(threading.Thread):
     
     def remove_node(self, node):
         # Mark the node as OFFLINE
-        con = MySQLdb.connect(self.glb_config.accounts_store_host, self.glb_config.accounts_store_user, self.glb_config.accounts_store_pass, self.glb_config.accounts_store_db)
-        cur = con.cursor(MySQLdb.cursors.DictCursor)
-        statement = "UPDATE " + self.glb_config.accounts_store_dns_records_talbe + " SET status = 'OFFLINE' WHERE ip = '" + node['ip'] + "' AND port = " + str(node['port']).strip('L') + " AND domain_id = (SELECT id FROM " + self.glb_config.accounts_store_domains_table + " WHERE cname = '" + node['cname'] + "')"
-        cur.execute(statement)
-        cur.close()
-        con.close()
+        try:
+            con = MySQLdb.connect(self.glb_config.accounts_store_host, self.glb_config.accounts_store_user, self.glb_config.accounts_store_pass, self.glb_config.accounts_store_db)
+            cur = con.cursor(MySQLdb.cursors.DictCursor)
+            statement = "UPDATE " + self.glb_config.accounts_store_dns_records_talbe + " SET status = 'OFFLINE' WHERE ip = '" + node['ip'] + "' AND port = " + str(node['port']).strip('L') + " AND domain_id = (SELECT id FROM " + self.glb_config.accounts_store_domains_table + " WHERE cname = '" + node['cname'] + "')"
+            cur.execute(statement)
+            cur.close()
+            con.close()
+        except (MySQLdb.OperationalError) as mysql_error:
+            self.logger.info(mysql_error)
 
         # Remove the node from the BIND zone table
-        con = MySQLdb.connect(self.glb_config.dns_backends_host, self.glb_config.dns_backends_user, self.glb_config.dns_backends_pass, self.glb_config.dns_backends_db)
-        cur = con.cursor(MySQLdb.cursors.DictCursor)
-        statement = "DELETE FROM " + self.glb_config.dns_backends_zone_table + " WHERE name = '" + node['cname'] + "' AND rdata = '" + node['ip'] + "'"
-        cur.execute(statement)
-        cur.close()
-        con.close()
+        try:
+            con = MySQLdb.connect(self.glb_config.dns_backends_host, self.glb_config.dns_backends_user, self.glb_config.dns_backends_pass, self.glb_config.dns_backends_db)
+            cur = con.cursor(MySQLdb.cursors.DictCursor)
+            statement = "DELETE FROM " + self.glb_config.dns_backends_zone_table + " WHERE name = '" + node['cname'] + "' AND rdata = '" + node['ip'] + "'"
+            cur.execute(statement)
+            cur.close()
+            con.close()
+        except (MySQLdb.OperationalError) as mysql_error:
+            self.logger.info(mysql_error)
 
     def add_node(self, node):
         # Mark the node as ONLINE
-        con = MySQLdb.connect(self.glb_config.accounts_store_host, self.glb_config.accounts_store_user, self.glb_config.accounts_store_pass, self.glb_config.accounts_store_db)
-        cur = con.cursor(MySQLdb.cursors.DictCursor)
-        statement = "UPDATE " + self.glb_config.accounts_store_dns_records_talbe + " SET status = 'ONLINE' WHERE ip = '" + node['ip'] + "' AND port = " + str(node['port']).strip('L') + " AND domain_id = (SELECT id FROM " + self.glb_config.accounts_store_domains_table + " WHERE cname = '" + node['cname'] + "')"
-        cur.execute(statement)
-        cur.close()
-        con.close()
+        try:
+            con = MySQLdb.connect(self.glb_config.accounts_store_host, self.glb_config.accounts_store_user, self.glb_config.accounts_store_pass, self.glb_config.accounts_store_db)
+            cur = con.cursor(MySQLdb.cursors.DictCursor)
+            statement = "UPDATE " + self.glb_config.accounts_store_dns_records_talbe + " SET status = 'ONLINE' WHERE ip = '" + node['ip'] + "' AND port = " + str(node['port']).strip('L') + " AND domain_id = (SELECT id FROM " + self.glb_config.accounts_store_domains_table + " WHERE cname = '" + node['cname'] + "')"
+            cur.execute(statement)
+            cur.close()
+            con.close()
+        except (MySQLdb.OperationalError) as mysql_error:
+            self.logger.info(mysql_error)
 
         # Add the node to the BIND zone table
-        con = MySQLdb.connect(self.glb_config.dns_backends_host, self.glb_config.dns_backends_user, self.glb_config.dns_backends_pass, self.glb_config.dns_backends_db)
-        cur = con.cursor(MySQLdb.cursors.DictCursor)
-        statement = " INSERT INTO " + self.glb_config.dns_backends_zone_table + " VALUES ('" + node['cname'] + "', 259200, '" + node['type'] + "', '" + node['ip'] + "')" 
-        cur.execute(statement)
-        cur.close()
-        con.close()
+        try:
+            con = MySQLdb.connect(self.glb_config.dns_backends_host, self.glb_config.dns_backends_user, self.glb_config.dns_backends_pass, self.glb_config.dns_backends_db)
+            cur = con.cursor(MySQLdb.cursors.DictCursor)
+            statement = " INSERT INTO " + self.glb_config.dns_backends_zone_table + " VALUES ('" + node['cname'] + "', 259200, '" + node['type'] + "', '" + node['ip'] + "')" 
+            cur.execute(statement)
+            cur.close()
+            con.close()
+        except (MySQLdb.OperationalError) as mysql_error:
+            self.logger.info(mysql_error)
       
     def run(self):
         while True:
@@ -58,6 +70,7 @@ class ThreadHealthCheck(threading.Thread):
             node_status = node['status']
 
             if node['health_check'] == "HTTP":
+                # HTTP health check
                 try:
                     http_conn = httplib.HTTPConnection(node_ip, port=node_port, timeout=node_timeout)
                     http_conn.request("GET", "/")
@@ -76,8 +89,18 @@ class ThreadHealthCheck(threading.Thread):
                         self.logger.info("Health check - HTTP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, http_exception))
                         self.remove_node(node)
             elif node['health_check'] == "TCP":
-                # TODO: Implement TCP health check
-                pass
+                # TCP health check
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.connect((node_ip, node_port))
+                    if node_status == "OFFLINE":
+                        self.logger.info("Health check - TCP - PASS for node %s for customer %s" % (node_ip, node_cname))
+                        self.add_node(node)
+                except (socket.error) as socket_error:
+                    if node_status != "OFFLINE":
+                        self.logger.info("Health check - TCP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, socket_error))
+                        self.remove_node(node)
+                
 
             self.queue.task_done()
 
@@ -98,17 +121,20 @@ class Healthcheck(object):
             t.start()
 
         while True:
-            con = MySQLdb.connect(self.glb_config.accounts_store_host, self.glb_config.accounts_store_user, self.glb_config.accounts_store_pass, self.glb_config.accounts_store_db)
-            cur = con.cursor(MySQLdb.cursors.DictCursor)
+            try:
+                con = MySQLdb.connect(self.glb_config.accounts_store_host, self.glb_config.accounts_store_user, self.glb_config.accounts_store_pass, self.glb_config.accounts_store_db)
+                cur = con.cursor(MySQLdb.cursors.DictCursor)
 
-            statement = "select domain_id, dns_records.ip, dns_records.port, dns_records.timeout, dns_records.type, domains.cname, domains.health_check, dns_records.status from " + self.glb_config.accounts_store_dns_records_talbe + " join domains on dns_records.domain_id = domains.id"
-            cur.execute(statement)
-            nodes_info = cur.fetchall()                         # Get all nodes and pass them to the worker threads through the queue
+                statement = "select domain_id, dns_records.ip, dns_records.port, dns_records.timeout, dns_records.type, domains.cname, domains.health_check, dns_records.status from " + self.glb_config.accounts_store_dns_records_talbe + " join domains on dns_records.domain_id = domains.id"
+                cur.execute(statement)
+                nodes_info = cur.fetchall()                             # Get all nodes and pass them to the worker threads through the queue
 
-            for node in nodes_info:
-                queue.put(node)
+                for node in nodes_info:
+                    queue.put(node)
 
-            cur.close()
-            con.close()
+                cur.close()
+                con.close()
+            except (MySQLdb.OperationalError) as mysql_error:
+                self.logger.info(mysql_error)
 
             time.sleep(5)

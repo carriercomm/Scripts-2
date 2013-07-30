@@ -39,7 +39,8 @@ class MainApp(object):
 
             if len(domain_ips) > 0:
                 ip = dns_data.geo_ip_select(addr[0], domain_ips)            # Select an A record based on the requestor's country of origin
-                sock.sendto(dns_data.response(ip), addr)                    # Send a reply back with the selected A record to the requestor
+                if ip != "" and ip != "Nowhere":
+                    sock.sendto(dns_data.response(ip), addr)                    # Send a reply back with the selected A record to the requestor
         else:
             logger.info("Invalid Request, discarding!")
 
@@ -76,7 +77,7 @@ class MainApp(object):
         try:
             os.waitpid(-1, 0)
         except KeyboardInterrupt:
-            print "\nbailing"
+            print "\nExiting"
             sys.exit()
 
 
@@ -98,4 +99,3 @@ if __name__ == "__main__":
     daemon_runner = runner.DaemonRunner(main_app)                       # Daemonize the application
     daemon_runner.daemon_context.files_preserve=[handler.stream]
     daemon_runner.do_action()
-
