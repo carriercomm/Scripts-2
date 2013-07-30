@@ -1,4 +1,4 @@
 Python Implementation of Global Load Balancer
 using GEO IP Locating database. It features 
-health checks and various load distributin 
-algorithms
+health checks and various load distributing 
+algorithms.
