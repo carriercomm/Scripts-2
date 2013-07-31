@@ -15,7 +15,7 @@ class ParseConfig(object):
             self.udp_port = int(glb_conf["properties"]["listening_port"])
             self.workers_dns = glb_conf["properties"]["workers_dns"]
             self.workers_mon = glb_conf["properties"]["workers_mon"]
-        
+
             self.geoip_store_host = str(glb_conf['geoip_store']['host'])
             self.geoip_store_user = str(glb_conf['geoip_store']['user'])
             self.geoip_store_pass = str(glb_conf['geoip_store']['password'])
