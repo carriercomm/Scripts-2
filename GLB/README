@@ -2,7 +2,7 @@ Python Implementation of Global Load Balancer using Geo IP Locating database.
 It features HTTP and TCP health checks and two routing algorithms - Geo IP Country and Random.
 
 The config file is /etc/geolb.conf
-Logs go to /var/log/geolb.log 
+The logs go to /var/log/geolb.log 
 
 The program is daemonized and can be started/stopped/restarted by running:
 
