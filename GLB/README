@@ -1,6 +1,5 @@
 Python Implementation of Global Load Balancer using Geo IP Locating database. 
-It features HTTP and TCP health checks and two routing algorithms - Geo IP Country
-and Random.
+It features HTTP and TCP health checks and two routing algorithms - Geo IP Country and Random.
 
 The config file is /etc/geolb.conf
 
@@ -9,8 +8,8 @@ The program is daemonized and can be started/stopped/restarted by running:
 $ python geo_lb.py start
 
 The main program pre-forks 10 (configurable) child work processes that will do the CPU bound packet inspection and manipulation.
-The sixth child process is the health monitor.
 
+A separate dedicated child process is forked and allocated to the health monitor.
 The health monitor process starts 5 (configurable) threads to do the IO bound MySql operations.
 
-The Geo IP database is the free version from MaxMind, with about 98% accuracy.
+The Geo IP database is a free version from MaxMind, with about 98% accuracy.
