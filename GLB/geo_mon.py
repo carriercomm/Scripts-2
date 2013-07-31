@@ -7,13 +7,13 @@ import socket
 
 
 class ThreadHealthCheck(threading.Thread):
-    
+
     def __init__(self, queue, logger, glb_config):
         threading.Thread.__init__(self)
         self.queue = queue
         self.logger = logger
         self.glb_config = glb_config
-    
+
     def remove_node(self, node):
         # Mark the node as OFFLINE
         try:
@@ -53,13 +53,13 @@ class ThreadHealthCheck(threading.Thread):
         try:
             con = MySQLdb.connect(self.glb_config.dns_backends_host, self.glb_config.dns_backends_user, self.glb_config.dns_backends_pass, self.glb_config.dns_backends_db)
             cur = con.cursor(MySQLdb.cursors.DictCursor)
-            statement = " INSERT INTO " + self.glb_config.dns_backends_zone_table + " VALUES ('" + node['cname'] + "', 259200, '" + node['type'] + "', '" + node['ip'] + "')" 
+            statement = "INSERT INTO " + self.glb_config.dns_backends_zone_table + " VALUES ('" + node['cname'] + "', 259200, '" + node['type'] + "', '" + node['ip'] + "')"
             cur.execute(statement)
             cur.close()
             con.close()
         except (MySQLdb.OperationalError) as mysql_error:
             self.logger.info(mysql_error)
-      
+
     def run(self):
         while True:
             node = self.queue.get()
@@ -100,19 +100,18 @@ class ThreadHealthCheck(threading.Thread):
                     if node_status != "OFFLINE":
                         self.logger.info("Health check - TCP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, socket_error))
                         self.remove_node(node)
-                
 
             self.queue.task_done()
 
 
 class Healthcheck(object):
-    
+
     def __init__(self, glb_config, logger):
         self.glb_config = glb_config
         self.logger = logger
-            
+
     def check_customer_nodes(self):
-        
+
         queue = Queue.Queue()
 
         for i in range(self.glb_config.workers_mon):
