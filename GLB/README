@@ -12,4 +12,16 @@ The main program pre-forks 10 (configurable) child work processes that will do t
 A separate dedicated child process is forked and allocated to the health monitor.
 The health monitor process starts 5 (configurable) threads to do the IO bound MySql operations.
 
-The Geo IP database is a free version from MaxMind, with about 98% accuracy.
+The Geo IP database is a free version from MaxMind [1], with about 98% accuracy.
+
+The program queries predefined set of BIND [2] DNS servers on the back-end that use MySql to store their zone files.
+To do that, you'll need to get the BIND source code, patch it with [3] and recompile it.
+
+A typical DNS query will look like this:
+
+customer ---> DNS ---> DNS LB ---> BIND ---> MySql
+
+[1]. http://dev.maxmind.com/geoip/legacy/csv/
+[2]. http://www.isc.org/wp-content/plugins/email-before-download/download.php?dl=26b22d186654c5852a41fab4c8d11a35
+[3]. http://sourceforge.net/projects/mysql-bind/files/mysql-bind/mysql-bind-0.2%20src/
+     http://mysql-bind.sourceforge.net/docs.php
