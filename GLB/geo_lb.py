@@ -4,6 +4,7 @@ import sys
 import logging
 from daemon import runner
 import os
+import MySQLdb
 
 import geo_conf_parser
 import geo_dns_worker
@@ -20,7 +21,7 @@ class MainApp(object):
         self.stdin_path = '/dev/null'
         self.stdout_path = '/dev/tty'
         self.stderr_path = '/dev/tty'
-        self.pidfile_path =  PID_FILE
+        self.pidfile_path = PID_FILE
         self.pidfile_timeout = 5
 
     def dns_processor(self, data, addr, sock):
@@ -32,15 +33,35 @@ class MainApp(object):
 
         domain_name = dns_data.get_domain_name()                                # Extract the requested domain name from the DNS UDP packet
         if domain_name != "":
-            dns_type = dns_data.get_domain_record()                                 # Extract the type of record requested for the domain name
-            domain_ips = dns_data.query_auth_dns(domain_name, dns_type)             # Get the list of A records from the BIND back-ends for the requested domain name and record type
-
-            # TODO: Get the algorithm for the requested domain name
+            dns_type = dns_data.get_domain_record()                             # Extract the type of record requested for the domain name
+            domain_ips = dns_data.query_auth_dns(domain_name, dns_type)         # Get the list of A records from the BIND back-ends for the requested domain name and record type
 
             if len(domain_ips) > 0:
-                ip = dns_data.geo_ip_select(addr[0], domain_ips)            # Select an A record based on the requestor's country of origin
+                glb_algorithm = "GEO_COUNTRY"                                   # The default algorithm
+                try:
+                    con = MySQLdb.connect(glb_config.accounts_store_host, glb_config.accounts_store_user, glb_config.accounts_store_pass, glb_config.accounts_store_db)
+                    cur = con.cursor(MySQLdb.cursors.DictCursor)
+                    statement = "SELECT algorithm FROM domains WHERE cname = '" + domain_name.rstrip(".") + "'"
+                    cur.execute(statement)
+                    rows = cur.fetchall()
+                    if len(rows) != 0:
+                        glb_algorithm = rows[0]['algorithm']
+                    cur.close()
+                    con.close()
+                except (MySQLdb.OperationalError) as mysql_error:
+                    self.logger.info(mysql_error)
+
+                ip = ""
+                if glb_algorithm == "GEO_COUNTRY":
+                    ip = dns_data.geo_ip_select(addr[0], domain_ips)            # Select an A record based on the requestor's country of origin
+                elif glb_algorithm == "RANDOM":
+                    ip = dns_data.random_select(addr[0], domain_ips)            # Select an A record randomly
+                else:
+                    ip = "Nowhere"
                 if ip != "" and ip != "Nowhere":
                     sock.sendto(dns_data.response(ip), addr)                    # Send a reply back with the selected A record to the requestor
+                else:
+                    logger.info("No A record selected, discarding!")
         else:
             logger.info("Invalid Request, discarding!")
 
@@ -97,5 +118,5 @@ if __name__ == "__main__":
     logger.addHandler(handler)
 
     daemon_runner = runner.DaemonRunner(main_app)                       # Daemonize the application
-    daemon_runner.daemon_context.files_preserve=[handler.stream]
+    daemon_runner.daemon_context.files_preserve = [handler.stream]
     daemon_runner.do_action()
