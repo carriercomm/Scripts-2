@@ -1,6 +1,7 @@
 import logging
 import DNS
 import MySQLdb
+from random import choice
 
 
 class DNSManipulator(object):
@@ -9,12 +10,12 @@ class DNSManipulator(object):
         self.data = data
         self.glb_config = glb_config
         self.logger = logger
-        self.domain_name_offset = ''            # Will contain the offset (the end of) the domain name
+        self.domain_name_offset = ''            # Will contain the offset (at the end of) the domain name
 
     def get_domain_record(self):
 
         #    16b trans ID       16b Flags       16b Question      16b Answer RR     16b Authority    16b Additional    lenght      w        w        w     lenght
-        # 11001000 10100101 00000001 00000000 00000000 00000001 00000000 00000000 00000000 00000000 00000000 00000000 00000011 01110111 01110111 01110111 00000110 
+        # 11001000 10100101 00000001 00000000 00000000 00000001 00000000 00000000 00000000 00000000 00000000 00000000 00000011 01110111 01110111 01110111 00000110
         #    d        e        e        k        o        n      lenght      c        o        m      end      Question Type    Question Class
         # 01100100 01100101 01100101 01101011 01101111 01101110 00000011 01100011 01101111 01101101 00000000 00000000 00000010 00000000 00000001
 
@@ -24,35 +25,35 @@ class DNSManipulator(object):
         if self.glb_config.debug:
             data_hex = self.data.encode("hex")
             data_bin = ""
-            for i in range(0,len(data_hex),2):
-                data_bin += (bin(int(data_hex[i:i+2],16)))[2:].zfill(8)
-        
+            for i in range(0, len(data_hex), 2):
+                data_bin += (bin(int(data_hex[i:i+2], 16)))[2:].zfill(8)
+
             log_event = "Hex Data: " + data_hex
             self.logger.info(log_event)
-            log_event =  "Binary Data: " + data_bin
+            log_event = "Binary Data: " + data_bin
             self.logger.info(log_event)
 
-        dns_type1 = ord(self.data[-4:-3])       # Get the most  significant byte from the Question Type
-        dns_type2 = ord(self.data[-3:-2])       # Get the least significant byte from the Question Type
+        dns_type1 = ord(self.data[-4:-3])      # Get the most  significant byte from the Question Type
+        dns_type2 = ord(self.data[-3:-2])      # Get the least significant byte from the Question Type
 
         dns_type = str(dns_type1) + str(dns_type2)
 
         if dns_type == "01":
-            record_type='A'
+            record_type = 'A'
         elif dns_type == "015":
-            record_type='MX'
+            record_type = 'MX'
         elif dns_type == "012":
-            record_type='PTR'
+            record_type = 'PTR'
         elif dns_type == "02":
-            record_type='NS'
+            record_type = 'NS'
         elif dns_type == "10":
-            record_type="TXT"
+            record_type = "TXT"
         elif dns_type == "05":
-            record_type="CNAME"
+            record_type = "CNAME"
         elif dns_type == "0255":
-            record_type="ANY"
+            record_type = "ANY"
         else:
-            record_type="A"
+            record_type = "A"
 
         dns_type_hex = self.data[-4:-2].encode("hex")
 
@@ -98,28 +99,14 @@ class DNSManipulator(object):
                 if res_list[i]["typename"] == "A":
                     ip_list.append(res_list[i]["data"])
 
-            log_event =  "DNS server returned " + str(ip_list)
+            log_event = "DNS server returned " + str(ip_list)
             self.logger.info(log_event)
         except (DNS.Base.SocketError) as dns_error:
                 self.logger.info("Cant connect to back-end DNS server - %s" % (dns_error))
 
         return ip_list
-    
-    def geo_ip_select(self, requestor, dns_resolved_list):
 
-        #pr = subprocess.Popen(["/usr/bin/geoiplookup", requestor], shell=False, stdout=subprocess.PIPE)
-        #requestor_location = pr.stdout.readlines()
-        #
-        #for i in range(0,len(dns_resolved_list)):
-        #  pr = subprocess.Popen(["/usr/bin/geoiplookup", dns_resolved_list[i]], shell=False, stdout=subprocess.PIPE)
-        #  output = pr.stdout.readlines()
-        #  seleted_geo_loc = output[0]
-        #  if output[0] == requestor_location[0]:
-        #    selected_geo_ip = dns_resolved_list[i]
-        #    break
-        #  else:
-        #    selected_geo_ip = dns_resolved_list[0]
-
+    def geo_ip_select(self, requestor, dns_resolved_list):                 # For the given list of A records, select the one that's closest to the requestors country
         seleted_geo_loc = "Unknown"
         requestor_location = "Unknown"
         selected_geo_ip = "Nowhere"
@@ -154,22 +141,32 @@ class DNSManipulator(object):
         except (MySQLdb.OperationalError) as mysql_error:
             self.logger.info(mysql_error)
 
-        log_event =  "Requestor " + requestor + " located at " + requestor_location
+        log_event = "Requestor " + requestor + " located at " + requestor_location
         self.logger.info(log_event)
-        log_event =  "Sending to " + selected_geo_ip + " at " + seleted_geo_loc
+        log_event = "Sending to " + selected_geo_ip + " at " + seleted_geo_loc
         self.logger.info(log_event)
-    
+
         return selected_geo_ip
+
+    def random_select(self, requestor, dns_resolved_list):                 # For the given list of A records, select one at random
+        selected_random_ip = choice(dns_resolved_list)
+
+        log_event = "Requestor " + requestor
+        self.logger.info(log_event)
+        log_event = "Sending to random server " + selected_random_ip
+        self.logger.info(log_event)
+
+        return selected_random_ip
 
     def response(self, ip):
         packet = ''
-        packet += self.data[:2] + "\x81\x80"                             # 10000001 10000000    (response recursive) (can handle recursive queries)
-        packet += self.data[4:6] + self.data[4:6] + '\x00\x00\x00\x00'   # Questions and Answers Counts and Authority and Additional
-        packet += self.data[12:self.domain_name_offset+5]                # Original Domain Name Question plus 2 bytes for Type and 2 bytes for Class
-            
-        packet += '\xc0\x0c'                                             # Pointer to domain name
-        packet += '\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04'             # Response type (2 bytes x00 x01 A), class (2 bytes x00x01 IN), ttl (4 bytes x00x00x00x3c in seconds), data length (2 bytes x00x04)
-        packet += str.join('',map(lambda x: chr(int(x)), ip.split('.'))) # 4bytes of IP
+        packet += self.data[:2] + "\x81\x80"                               # 10000001 10000000    (response recursive) (can handle recursive queries)
+        packet += self.data[4:6] + self.data[4:6] + '\x00\x00\x00\x00'     # Questions and Answers Counts and Authority and Additional
+        packet += self.data[12:self.domain_name_offset+5]                  # Original Domain Name Question plus 2 bytes for Type and 2 bytes for Class
+
+        packet += '\xc0\x0c'                                               # Pointer to domain name
+        packet += '\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04'               # Response type (2 bytes x00 x01 A), class (2 bytes x00x01 IN), ttl (4 bytes x00x00x00x3c in seconds), data length (2 bytes x00x04)
+        packet += str.join('', map(lambda x: chr(int(x)), ip.split('.')))  # 4bytes of IP
 
         # print "Reponse: " + packet.encode("hex")
 
