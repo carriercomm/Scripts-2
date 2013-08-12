@@ -45,6 +45,9 @@ class ParseConfig(object):
             self.accounts_store_domains_table = str(glb_conf['accounts_store']['domainstable'])
             self.accounts_store_dns_records_talbe = str(glb_conf['accounts_store']['dnsrecordstalbe'])
 
+            self.memcached_host = str(glb_conf['memcached_server']['host'])
+            self.memcached_port = int(glb_conf['memcached_server']['port'])
+
         except IOError:
             print "Configuration file %s not found.\nExiting ..." % (config_file)
             exit()
