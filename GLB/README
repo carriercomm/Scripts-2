@@ -24,6 +24,11 @@ A typical DNS query will look like this:
 
 customer ---> DNS ---> DNS LB ---> BIND ---> MySql
 
+To install the prerequisites:
+
+$ easy_install -U distribute
+$ pip install python-daemon MySQL-python pydns pymemcache
+
 [1]. http://dev.maxmind.com/geoip/legacy/csv/
 [2]. http://www.isc.org/wp-content/plugins/email-before-download/download.php?dl=26b22d186654c5852a41fab4c8d11a35
 [3]. http://sourceforge.net/projects/mysql-bind/files/mysql-bind/mysql-bind-0.2%20src/
