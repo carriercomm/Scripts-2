@@ -1,5 +1,5 @@
 Python Implementation of Global Load Balancer using Geo IP Locating database. 
-It features HTTP and TCP health checks and two routing algorithms - Geo IP Country and Random.
+It features HTTP and TCP health checks and two routing algorithms - Geo IP Country, Geop IP City and Random.
 
 It uses memcached as a caching layer.
 
