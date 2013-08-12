@@ -41,8 +41,8 @@ class MainApp(object):
                 glb_algorithm = "GEO_COUNTRY"                                   # The default algorithm
                 
                 try:
-                    memcache_client = Client(('localhost', 11211))
-                    glb_algorithm  = memcache_client.get(domain_name)                 # Check memcached for the algorithm, if not query the database and update the cache
+                    memcache_client = Client((glb_config.memcached_host, glb_config.memcached_port))
+                    glb_algorithm  = memcache_client.get(domain_name)                       # Check memcached for the algorithm, if not query the database and update the cache
                     
                     if glb_algorithm  == None:
                         try:
@@ -58,7 +58,6 @@ class MainApp(object):
                             con.close()
                         except (MySQLdb.OperationalError) as mysql_error:
                             logger.info(mysql_error)
-
                 except (MemcacheUnexpectedCloseError, socket.error) as memcached_error:
                     logger.info(memcached_error)
 
