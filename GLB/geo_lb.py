@@ -2,9 +2,10 @@ import multiprocessing
 import socket
 import sys
 import logging
-from daemon import runner
 import os
 import MySQLdb
+from daemon import runner
+from pymemcache.client import *
 
 import geo_conf_parser
 import geo_dns_worker
@@ -38,18 +39,28 @@ class MainApp(object):
 
             if len(domain_ips) > 0:
                 glb_algorithm = "GEO_COUNTRY"                                   # The default algorithm
+                
                 try:
-                    con = MySQLdb.connect(glb_config.accounts_store_host, glb_config.accounts_store_user, glb_config.accounts_store_pass, glb_config.accounts_store_db)
-                    cur = con.cursor(MySQLdb.cursors.DictCursor)
-                    statement = "SELECT algorithm FROM domains WHERE cname = '" + domain_name.rstrip(".") + "'"
-                    cur.execute(statement)
-                    rows = cur.fetchall()
-                    if len(rows) != 0:
-                        glb_algorithm = rows[0]['algorithm']
-                    cur.close()
-                    con.close()
-                except (MySQLdb.OperationalError) as mysql_error:
-                    self.logger.info(mysql_error)
+                    memcache_client = Client(('localhost', 11211))
+                    glb_algorithm  = memcache_client.get(domain_name)                 # Check memcached for the algorithm, if not query the database and update the cache
+                    
+                    if glb_algorithm  == None:
+                        try:
+                            con = MySQLdb.connect(glb_config.accounts_store_host, glb_config.accounts_store_user, glb_config.accounts_store_pass, glb_config.accounts_store_db)
+                            cur = con.cursor(MySQLdb.cursors.DictCursor)
+                            statement = "SELECT algorithm FROM domains WHERE cname = '" + domain_name.rstrip(".") + "'"
+                            cur.execute(statement)
+                            rows = cur.fetchall()
+                            if len(rows) != 0:
+                                glb_algorithm = rows[0]['algorithm']
+                                memcache_client.set(domain_name, glb_algorithm, 3 * 60)     # Cache the algorithm for 3 * 60 seconds
+                            cur.close()
+                            con.close()
+                        except (MySQLdb.OperationalError) as mysql_error:
+                            logger.info(mysql_error)
+
+                except (MemcacheUnexpectedCloseError, socket.error) as memcached_error:
+                    logger.info(memcached_error)
 
                 ip = ""
                 if glb_algorithm == "GEO_COUNTRY":
