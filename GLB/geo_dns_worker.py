@@ -3,6 +3,7 @@ import DNS
 import MySQLdb
 from random import choice
 from pymemcache.client import *
+import math
 
 
 class DNSManipulator(object):
@@ -107,7 +108,7 @@ class DNSManipulator(object):
 
         return ip_list
 
-    def geo_ip_select(self, requestor, dns_resolved_list):                 # For the given list of A records, select the one that's closest to the requestors country
+    def geo_country_select(self, requestor, dns_resolved_list):                 # For the given list of A records, select the one that's closest to the requestors country
         seleted_geo_loc = "Unknown"
         requestor_location = "Unknown"
         selected_geo_ip = "Nowhere"
@@ -121,7 +122,7 @@ class DNSManipulator(object):
             requestor_location  = memcache_client.get(requestor_key)                       # Check memcached for the requestors location, if not query the database and update the cache
 
             if requestor_location == None:
-                statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + requestor + "') BETWEEN begin_ip_num AND end_ip_num"
+                statement = "select country_code from " + self.glb_config.geoip_country + " where INET_ATON('" + requestor + "') BETWEEN begin_ip_num AND end_ip_num"
                 cur.execute(statement)
                 rows = cur.fetchall()
                 if len(rows) != 0:
@@ -141,7 +142,7 @@ class DNSManipulator(object):
 
             if selected_geo_ip == "Nowhere" or selected_geo_ip == None:
                 for i in range(0, len(dns_resolved_list)):
-                    statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + dns_resolved_list[i] + "') BETWEEN begin_ip_num AND end_ip_num"
+                    statement = "select country_code from " + self.glb_config.geoip_country + " where INET_ATON('" + dns_resolved_list[i] + "') BETWEEN begin_ip_num AND end_ip_num"
                     cur.execute(statement)
                     rows = cur.fetchall()
                     if len(rows) != 0:
@@ -166,6 +167,78 @@ class DNSManipulator(object):
         self.logger.info(log_event)
         log_event = "Sending to " + selected_geo_ip + " at " + selected_geo_loc
         self.logger.info(log_event)
+
+        return selected_geo_ip
+
+    def get_coordinates(self, ipaddress):
+        coordinates = None
+
+        con = MySQLdb.connect(self.glb_config.geoip_store_host, self.glb_config.geoip_store_user, self.glb_config.geoip_store_pass, self.glb_config.geoip_store_db)
+        cur = con.cursor(MySQLdb.cursors.DictCursor)
+
+        statement = "select location_id from " + self.glb_config.geoip_city_blocks + " where INET_ATON('" + ipaddress + "') BETWEEN begin_ip_num AND end_ip_num"
+        cur.execute(statement)
+        rows = cur.fetchall()
+        if len(rows) != 0:
+            requestor_location_id = str(rows[0]['location_id']).rstrip('L')
+            statement = "select latitude, longitude from " + self.glb_config.geoip_city_location  + " where location_id = " + requestor_location_id
+            cur.execute(statement)
+            rows = cur.fetchall()
+            if len(rows) != 0:
+                requestor_lon = rows[0]['longitude']
+                requestor_lat = rows[0]['latitude']
+                coordinates = rows[0]
+                log_event = "Coordinates for " + str(ipaddress) + " " + str(requestor_lon) + ":" + str(requestor_lat)
+                self.logger.info(log_event)
+        else:
+            log_event = "Unknown coordinates for " + str(ipaddress)
+            self.logger.info(log_event)
+
+        cur.close()
+        con.close()
+
+        return coordinates
+
+    def get_distance(self, requestor_lon, requestor_lat, a_record_lon, a_record_lat):
+        earth_radius = 3959
+
+        dlat = math.radians(a_record_lat - requestor_lat)
+        dlon = math.radians(a_record_lon - requestor_lon)
+        a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.cos(math.radians(requestor_lat)) * math.cos(math.radians(a_record_lat)) * math.sin(dlon / 2) * math.sin(dlon / 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        distance = earth_radius * c
+
+        return distance
+
+    def geo_city_select(self, requestor, dns_resolved_list):                 # For the given list of A records, select the one that's closest to the requestors city
+        selected_geo_ip = "Nowhere"
+        requestor_lon = 0
+        requestor_lat = 0
+        a_records_distance = {}
+
+        requestor_coordinates = self.get_coordinates(requestor)
+        if requestor_coordinates != None:
+            requestor_lon = requestor_coordinates['longitude']
+            requestor_lat = requestor_coordinates['latitude']
+
+            for i in range(0, len(dns_resolved_list)):
+                a_record_coordinates = self.get_coordinates(dns_resolved_list[i])
+                if a_record_coordinates == None:
+                    continue
+                else:
+                    a_record_lon = a_record_coordinates['longitude']
+                    a_record_lat = a_record_coordinates['latitude']
+
+                    # Calculate distance from the requestor to the A record and add to a dictionary that contains A records and the distances from the requstor
+                    a_records_distance[dns_resolved_list[i]] = self.get_distance(requestor_lon, requestor_lat, a_record_lon, a_record_lat)
+            if len(a_records_distance) > 0:
+                log_event = "List of distances : " + str(a_records_distance)
+                self.logger.info(log_event)
+                selected_geo_ip = [key for (key,value) in a_records_distance.items() if value == sorted(a_records_distance.values())[0]][0]
+                log_event = "Closest A record is: " + str(selected_geo_ip)
+                self.logger.info(log_event)
+        else:
+            selected_geo_ip = dns_resolved_list[0]
 
         return selected_geo_ip
 
