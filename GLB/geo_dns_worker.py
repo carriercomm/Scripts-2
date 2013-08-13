@@ -2,6 +2,7 @@ import logging
 import DNS
 import MySQLdb
 from random import choice
+from pymemcache.client import *
 
 
 class DNSManipulator(object):
@@ -112,38 +113,58 @@ class DNSManipulator(object):
         selected_geo_ip = "Nowhere"
 
         try:
+            memcache_client = Client((self.glb_config.memcached_host, self.glb_config.memcached_port))
             con = MySQLdb.connect(self.glb_config.geoip_store_host, self.glb_config.geoip_store_user, self.glb_config.geoip_store_pass, self.glb_config.geoip_store_db)
             cur = con.cursor(MySQLdb.cursors.DictCursor)
-            statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + requestor + "') BETWEEN begin_ip_num AND end_ip_num"
-            cur.execute(statement)
-            rows = cur.fetchall()
-            if len(rows) != 0:
-                requestor_location = rows[0]['country_code']
-            else:
-                requestor_location = "Unknown"
 
-            for i in range(0, len(dns_resolved_list)):
-                statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + dns_resolved_list[i] + "') BETWEEN begin_ip_num AND end_ip_num"
+            requestor_key = "requestor_" + str(requestor)
+            requestor_location  = memcache_client.get(requestor_key)                       # Check memcached for the requestors location, if not query the database and update the cache
+
+            if requestor_location == None:
+                statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + requestor + "') BETWEEN begin_ip_num AND end_ip_num"
                 cur.execute(statement)
                 rows = cur.fetchall()
                 if len(rows) != 0:
-                    seleted_geo_loc = rows[0]['country_code']
-                    if seleted_geo_loc == requestor_location:
-                        selected_geo_ip = dns_resolved_list[i]
-                        break
+                    requestor_location = rows[0]['country_code']
+                    memcache_client.set(requestor_key, requestor_location, 3 * 60)     # Cache the requestors location for 3 * 60 seconds
+                else:
+                    requestor_location = "Unknown"
+
+            for i in range(0, len(dns_resolved_list)):
+                a_record_key = "a_record_" + str(dns_resolved_list[i])
+                selected_geo_loc = memcache_client.get(a_record_key)
+                if selected_geo_loc == None:
+                    continue
+                elif selected_geo_loc == requestor_location:
+                    selected_geo_ip = dns_resolved_list[i]
+                    break
+
+            if selected_geo_ip == "Nowhere" or selected_geo_ip == None:
+                for i in range(0, len(dns_resolved_list)):
+                    statement = "select country_code from " + self.glb_config.geoip_store_table + " where INET_ATON('" + dns_resolved_list[i] + "') BETWEEN begin_ip_num AND end_ip_num"
+                    cur.execute(statement)
+                    rows = cur.fetchall()
+                    if len(rows) != 0:
+                        selected_geo_loc = rows[0]['country_code']
+                        if selected_geo_loc == requestor_location:
+                            selected_geo_ip = dns_resolved_list[i]
+                            break
+                        else:
+                            selected_geo_ip = dns_resolved_list[0]
                     else:
                         selected_geo_ip = dns_resolved_list[0]
-                else:
-                    selected_geo_ip = dns_resolved_list[0]
+                memcache_client.set("a_record_" + selected_geo_ip, selected_geo_loc, 3 * 60)     # Cache the A record location for 3 * 60 seconds
 
             cur.close()
             con.close()
-        except (MySQLdb.OperationalError) as mysql_error:
-            self.logger.info(mysql_error)
+            memcache_client.close()
+
+        except (MemcacheUnexpectedCloseError, MySQLdb.OperationalError, socket.error) as conn_error:
+            logger.info(conn_error)
 
         log_event = "Requestor " + requestor + " located at " + requestor_location
         self.logger.info(log_event)
-        log_event = "Sending to " + selected_geo_ip + " at " + seleted_geo_loc
+        log_event = "Sending to " + selected_geo_ip + " at " + selected_geo_loc
         self.logger.info(log_event)
 
         return selected_geo_ip
