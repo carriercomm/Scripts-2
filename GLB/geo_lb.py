@@ -58,16 +58,20 @@ class MainApp(object):
                             con.close()
                         except (MySQLdb.OperationalError) as mysql_error:
                             logger.info(mysql_error)
+                    memcache_client.close()
                 except (MemcacheUnexpectedCloseError, socket.error) as memcached_error:
                     logger.info(memcached_error)
 
                 ip = ""
                 if glb_algorithm == "GEO_COUNTRY":
-                    ip = dns_data.geo_ip_select(addr[0], domain_ips)            # Select an A record based on the requestor's country of origin
+                    ip = dns_data.geo_country_select(addr[0], domain_ips)            # Select an A record based on the requestor's country of origin
                 elif glb_algorithm == "RANDOM":
-                    ip = dns_data.random_select(addr[0], domain_ips)            # Select an A record randomly
+                    ip = dns_data.random_select(addr[0], domain_ips)                 # Select an A record randomly
+                elif glb_algorithm == "GEO_CITY":
+                    ip = dns_data.geo_city_select(addr[0], domain_ips)            # Select an A record based on the requestor's city of origin
                 else:
                     ip = "Nowhere"
+
                 if ip != "" and ip != "Nowhere":
                     sock.sendto(dns_data.response(ip), addr)                    # Send a reply back with the selected A record to the requestor
                 else:
