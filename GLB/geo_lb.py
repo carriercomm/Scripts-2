@@ -6,6 +6,7 @@ import os
 import MySQLdb
 from daemon import runner
 from pymemcache.client import *
+import datetime
 
 import geo_conf_parser
 import geo_dns_worker
@@ -28,14 +29,22 @@ class MainApp(object):
     def dns_processor(self, data, addr, sock):
         p = multiprocessing.current_process()
 
-        logger.info("Staring: %s %s " % (p.name, p.pid))
+        if glb_config.debug:
+            logger.debug("Starting: %s %s " % (p.name, p.pid))
 
         dns_data = geo_dns_worker.DNSManipulator(data, glb_config, logger)      # Initialize the DNSManipulator object
 
         domain_name = dns_data.get_domain_name()                                # Extract the requested domain name from the DNS UDP packet
         if domain_name != "":
             dns_type = dns_data.get_domain_record()                             # Extract the type of record requested for the domain name
+            if glb_config.debug:
+                start_op = datetime.datetime.now()
             domain_ips = dns_data.query_auth_dns(domain_name, dns_type)         # Get the list of A records from the BIND back-ends for the requested domain name and record type
+            if glb_config.debug:
+                end_op = datetime.datetime.now()
+                time_op = end_op - start_op
+                log_event = "Time to query for the A records: " + str(time_op.seconds) + " seconds and " + str(time_op.microseconds) + " microseconds"
+                logger.debug(log_event)
 
             if len(domain_ips) > 0:
                 glb_algorithm = "GEO_COUNTRY"                                   # The default algorithm
@@ -45,6 +54,9 @@ class MainApp(object):
                     glb_algorithm  = memcache_client.get(domain_name)                       # Check memcached for the algorithm, if not query the database and update the cache
                     
                     if glb_algorithm  == None:
+                        if glb_config.debug:
+                            log_event = "Algorithm not found in cache"
+                            logger.debug(log_event)
                         try:
                             con = MySQLdb.connect(glb_config.accounts_store_host, glb_config.accounts_store_user, glb_config.accounts_store_pass, glb_config.accounts_store_db)
                             cur = con.cursor(MySQLdb.cursors.DictCursor)
@@ -57,29 +69,58 @@ class MainApp(object):
                             cur.close()
                             con.close()
                         except (MySQLdb.OperationalError) as mysql_error:
-                            logger.info(mysql_error)
+                            logger.error(mysql_error)
+                    else:
+                        if glb_config.debug:
+                            log_event = str(glb_algorithm) + " found in cache"
+                            logger.debug(log_event)
+
                     memcache_client.close()
                 except (MemcacheUnexpectedCloseError, socket.error) as memcached_error:
-                    logger.info(memcached_error)
+                    logger.error(memcached_error)
 
                 ip = ""
                 if glb_algorithm == "GEO_COUNTRY":
+                    if glb_config.debug:
+                        start_op = datetime.datetime.now()
                     ip = dns_data.geo_country_select(addr[0], domain_ips)            # Select an A record based on the requestor's country of origin
+                    if glb_config.debug:
+                        end_op = datetime.datetime.now()
+                        time_op = end_op - start_op
+                        log_event = "Total time of execution for the " + str(glb_algorithm) + ": " + str(time_op.seconds) + " seconds and " + str(time_op.microseconds) + " microseconds"
+                        logger.debug(log_event)
                 elif glb_algorithm == "RANDOM":
+                    if glb_config.debug:
+                        start_op = datetime.datetime.now()
                     ip = dns_data.random_select(addr[0], domain_ips)                 # Select an A record randomly
+                    if glb_config.debug:
+                        end_op = datetime.datetime.now()
+                        time_op = end_op - start_op
+                        log_event = "Total time of execution for the " + str(glb_algorithm) + ": " + str(time_op.seconds) + " seconds and " + str(time_op.microseconds) + " microseconds"
+                        logger.debug(log_event)
                 elif glb_algorithm == "GEO_CITY":
+                    if glb_config.debug:
+                        start_op = datetime.datetime.now()
                     ip = dns_data.geo_city_select(addr[0], domain_ips)            # Select an A record based on the requestor's city of origin
+                    if glb_config.debug:
+                        end_op = datetime.datetime.now()
+                        time_op = end_op - start_op
+                        log_event = "Total time of execution for the " + str(glb_algorithm) + ": " + str(time_op.seconds) + " seconds and " + str(time_op.microseconds) + " microseconds"
+                        logger.debug(log_event)
                 else:
                     ip = "Nowhere"
 
                 if ip != "" and ip != "Nowhere":
                     sock.sendto(dns_data.response(ip), addr)                    # Send a reply back with the selected A record to the requestor
                 else:
-                    logger.info("No A record selected, discarding!")
+                    if glb_config.debug:
+                        logger.debug("No A record selected, discarding!")
         else:
-            logger.info("Invalid Request, discarding!")
+            if glb_config.debug:
+                logger.debug("Invalid Request, discarding!")
 
-        logger.info("Terminating: %s %s " % (p.name, p.pid))
+        if glb_config.debug:
+            logger.debug("Terminating: %s %s " % (p.name, p.pid))
         sys.stdout.flush()
 
     def run(self):
