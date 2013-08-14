@@ -24,7 +24,7 @@ class ThreadHealthCheck(threading.Thread):
             cur.close()
             con.close()
         except (MySQLdb.OperationalError) as mysql_error:
-            self.logger.info(mysql_error)
+            self.logger.error(mysql_error)
 
         # Remove the node from the BIND zone table
         try:
@@ -35,7 +35,7 @@ class ThreadHealthCheck(threading.Thread):
             cur.close()
             con.close()
         except (MySQLdb.OperationalError) as mysql_error:
-            self.logger.info(mysql_error)
+            self.logger.error(mysql_error)
 
     def add_node(self, node):
         # Mark the node as ONLINE
@@ -47,7 +47,7 @@ class ThreadHealthCheck(threading.Thread):
             cur.close()
             con.close()
         except (MySQLdb.OperationalError) as mysql_error:
-            self.logger.info(mysql_error)
+            self.logger.error(mysql_error)
 
         # Add the node to the BIND zone table
         try:
@@ -58,7 +58,7 @@ class ThreadHealthCheck(threading.Thread):
             cur.close()
             con.close()
         except (MySQLdb.OperationalError) as mysql_error:
-            self.logger.info(mysql_error)
+            self.logger.error(mysql_error)
 
     def run(self):
         while True:
@@ -78,7 +78,7 @@ class ThreadHealthCheck(threading.Thread):
 
                     if http_response.status >= 500:
                         if node_status != "OFFLINE":                                            # Already marked as failed, no need to do it again
-                            self.logger.info("Health check - HTTP - FAIL for node %s for customer %s with error '%s'" % (node_ip, node_cname, http_response.status))
+                            self.logger.error("Health check - HTTP - FAIL for node %s for customer %s with error '%s'" % (node_ip, node_cname, http_response.status))
                             self.remove_node(node)                                              # Mark the node as OFFLINE and remove from BIND zone table.
                     else:
                         if node_status == "OFFLINE":
@@ -86,7 +86,7 @@ class ThreadHealthCheck(threading.Thread):
                             self.add_node(node)
                 except (httplib.HTTPException, socket.error) as http_exception:
                     if node_status != "OFFLINE":
-                        self.logger.info("Health check - HTTP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, http_exception))
+                        self.logger.error("Health check - HTTP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, http_exception))
                         self.remove_node(node)
             elif node['health_check'] == "TCP":
                 # TCP health check
@@ -98,7 +98,7 @@ class ThreadHealthCheck(threading.Thread):
                         self.add_node(node)
                 except (socket.error) as socket_error:
                     if node_status != "OFFLINE":
-                        self.logger.info("Health check - TCP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, socket_error))
+                        self.logger.error("Health check - TCP - FAIL for node %s for customer %s with '%s'" % (node_ip, node_cname, socket_error))
                         self.remove_node(node)
 
             self.queue.task_done()
@@ -134,6 +134,6 @@ class Healthcheck(object):
                 cur.close()
                 con.close()
             except (MySQLdb.OperationalError) as mysql_error:
-                self.logger.info(mysql_error)
+                self.logger.error(mysql_error)
 
             time.sleep(5)
